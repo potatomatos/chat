@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>聊天室</title>
+<link href="css/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css"/>
+<link href="css/bootstrap.min.css" rel="stylesheet" type="text/css"/>
+<link href="css/index.css" rel="stylesheet" type="text/css"/>
+</head>
+<body>
+<section class="chat-room-wrap clearfix">
+	<div class="list-left pull-left">
+		<div class="logo">
+			<img alt="" src="logo">
+		</div>
+		<div class="list-tab clearfix">
+			<a href="javascript:" class="tab-user active">在线用户</a>
+			<a href="javascript:" class="tab-chatroom">聊天室</a>
+		</div>
+		<ul class="list list-online" >
+			<!-- 
+			<dd>
+				<a href="javascript:">
+					<span class="fa fa-user" data-username="" data-userid>用户1</span>
+				</a>
+			</dd>
+			-->
+			
+		</ul>
+		<ul class="list list-chatroom">
+			<li class="active chatroom-id">
+				<a href="javascript:" >
+					<span class="fa fa-list" data-chatroom="chatroom1">房间1</span>
+				</a>
+			</li>
+			<li  class="chatroom-id">
+				<a href="javascript:">
+					<span class="fa fa-list" data-chatroom="chatroom2">房间2</span>
+				</a>
+			</li>
+		</ul>
+	</div>
+	<div class="chat-room-main pull-left">
+		<div class="main-content">
+			<h2>房间1</h2>
+			<div class="main-wrap pre-scrollable">
+			<div class="main clearfix">
+		<!-- 		
+				<div class="tips">
+					<div class="tips-time">20:04:57</div>
+					<div class="tips-content">张三加入了聊天室</div>
+				</div>
+				<div class="tips">
+					<div class="tips-time">20:04:59</div>
+					<div class="tips-content">张三离开了聊天室</div>
+				</div>
+				
+				<div class="message-wrap clearfix">
+					<div class="message pull-left">
+						<div><span class="username">张三</span><span class="time">20:05:50</span></div>
+						<div class="message-content pull-left">
+							你好吗？
+						</div>
+					</div>
+				</div>
+				<div class="message-wrap clearfix">
+					<div class="message pull-right">
+						<div><span class="time">20:05:55</span><span class="username">李四</span></div>
+						<div class="message-content pull-right">
+							我很好
+						</div>
+					</div>
+				</div> -->
+			</div>
+			</div>
+		</div>
+		<div class="tool-bar">
+			<button class="btn btn-success send pull-right" style="display: inline-block;">发送</button>
+		</div> 
+		<div class="message-box">
+			<textarea rows="6" cols="" class="form-control"></textarea>
+		</div>
+	</div>
+</section>
+
+<script type="text/javascript" src="js/lib/jquery.min.js"></script>
+<script type="text/javascript" src="js/lib/bootstrap.min.js"></script>
+<script type="text/javascript" src="js/index.js"></script>
+
+</body>
+</html>

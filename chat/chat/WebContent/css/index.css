@@ -1,0 +1,142 @@
+@CHARSET "UTF-8";
+*{
+	margin:0;
+	padding:0;
+}
+a{
+	text-decoration:none
+}
+
+li{
+	list-style:none
+}
+.chat-room-wrap{
+	margin:0;
+	padding:0;
+	width:100%
+}
+.list-left{
+	width:20%;
+	min-height:400px;
+	height:auto;
+	border-right:1px solid #E9E9E9;
+	background:#F9FFF2
+}
+.list-left .logo{
+	width:100%;
+	height:150px;
+	border
+}
+.list-left .radom-user-name{
+	border:1px solid #E9E9E9;
+	line-height:35px;
+}
+.list-left .radom-user-name li{
+	float:left
+}
+.list-left .list{
+	width:100%
+}
+
+.list-left .list li a{
+	height:50px;
+	width:100%;
+	display:block;
+	line-height:50px;
+	padding:0 5%;
+	border:1px solid #E9E9E9;
+	font-size:18px;
+	color:#666;
+	
+}
+.list-left .list li a:hover{
+	background:#C7EDCC;
+}
+.list-left .list .active{
+	background:#C7EDCC;
+}
+
+.chat-room-main{
+	width:79.9%;
+	min-height:400px;
+	height:auto;
+	padding:1%;
+}
+.chat-room-main .main-content{
+	width:100%;
+	height:408px;
+	border:1px solid #E0EED3;
+	border-radius:5px;
+	overflow:hiden;
+}
+.chat-room-main .main-content h2{
+	width:100%;
+	height:40px;
+	border-bottom:1px solid #E0EED3;
+	background:#F9FFF2;
+	margin:0;
+	font-size:18px;
+	line-height:40px;
+	text-align:center
+}
+.chat-room-main .main-content .main{
+	padding:2%;
+	
+}
+.chat-room-main .main-content .main-wrap{
+	height:366px;
+	overflow:auto;
+}
+.chat-room-main .main-content .tips{
+	width:100%;
+	height:50px;
+	background:#F6F6F6;
+	color:#ACACAC;
+	text-align:center;
+	line-height:25px;
+	margin:10px 0;
+}
+.chat-room-main .main-content .message .username{
+	padding:5px;
+	font-size:18px;
+	color:#666
+}
+.chat-room-main .main-content .message .time{
+	padding:5px;
+	font-size:15px;
+	color:#999
+}
+.chat-room-main .main-content .message .message-content{
+	margin-top:8px;
+	padding:10px;
+	font-size:15px;
+	color:#555;
+	background:#CFFFCF;
+	border-radius:5px;
+	max-width:70%
+}
+.chat-room-main .tool-bar{
+	width:100%;
+	height:50px;
+	padding:5px;
+}
+
+.list-tab a{
+	text-decoration:none;
+	float:left;
+	width:49.9%;
+	height:40px;
+	text-align:center;
+	line-height:40px;
+	border:1px solid #E9E9E9;
+	color:#999
+}
+.list-tab a:hover{
+	background:#CFFFCF;
+}
+.list-chatroom{
+	display:none;
+}
+.list-tab .active{
+	background:#CFFFCF;
+}

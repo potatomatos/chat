@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:rabbit="http://www.springframework.org/schema/rabbit"
+	xmlns:util="http://www.springframework.org/schema/util" xmlns:redis="http://www.springframework.org/schema/redis"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+						http://www.springframework.org/schema/beans/spring-beans-4.0.xsd
+						http://www.springframework.org/schema/jee
+						http://www.springframework.org/schema/jee/spring-jee-4.0.xsd
+						http://www.springframework.org/schema/aop
+						http://www.springframework.org/schema/aop/spring-aop-4.0.xsd
+						http://www.springframework.org/schema/context
+						http://www.springframework.org/schema/context/spring-context-4.0.xsd
+						http://www.springframework.org/schema/util
+                        http://www.springframework.org/schema/util/spring-util-4.0.xsd
+                        http://www.springframework.org/schema/redis
+        http://www.springframework.org/schema/redis/spring-redis-1.0.xsd"
+	default-lazy-init="false">
+
+
+	<context:component-scan base-package="cn.cxnxs.chat.redis.dao" />
+
+	<context:property-placeholder location="classpath:redis.properties" />
+
+	<bean id="poolConfig" class="redis.clients.jedis.JedisPoolConfig">
+		<property name="maxIdle" value="${redis.maxIdle}" />
+		<property name="maxActive" value="${redis.maxActive}" />
+		<property name="maxWait" value="${redis.maxWait}" />
+		<property name="testOnBorrow" value="${redis.testOnBorrow}" />
+	</bean>
+
+	<bean id="connectionFactory"
+		class="org.springframework.data.redis.connection.jedis.JedisConnectionFactory"
+		p:host-name="${redis.host}" p:port="${redis.port}" p:password="${redis.pass}"
+		p:pool-config-ref="poolConfig" />
+
+	<bean id="redisTemplate" class="org.springframework.data.redis.core.StringRedisTemplate">
+		<property name="connectionFactory" ref="connectionFactory" />
+		<!-- 使用string主要是key 在redis端用命令好读 不然默认的序列化没办法读 -->
+		<property name="keySerializer">
+			<bean
+				class="org.springframework.data.redis.serializer.StringRedisSerializer" />
+		</property>
+		<property name="hashKeySerializer">
+			<bean
+				class="org.springframework.data.redis.serializer.StringRedisSerializer" />
+		</property>
+		<property name="valueSerializer">
+			<bean
+				class="org.springframework.data.redis.serializer.StringRedisSerializer" />
+		</property>
+		<property name="hashValueSerializer">
+			<bean
+				class="org.springframework.data.redis.serializer.StringRedisSerializer" />
+		</property>
+	</bean>
+
+  <!-- redis发布订阅配置 -->
+   <bean id="serialization" class="org.springframework.data.redis.serializer.JdkSerializationRedisSerializer" />  
+	<!-- 消息监听适配器  delegate属性指定真正的目标处理器-->  
+    <bean id="smsMessageListener"
+        class="org.springframework.data.redis.listener.adapter.MessageListenerAdapter">
+        <property name="delegate" ref="chatHandler" />
+       <!--  <property name="serializer" ref="serialization" />   -->
+    </bean>
+    <bean id="chatHandler" class="cn.cxnxs.chat.websocket.ChatHandler"/>
+    
+    <!-- 消息监听适配器对应的监听容器 -->
+     <redis:listener-container  connection-factory="connectionFactory">
+        <redis:listener ref="smsMessageListener" method="handleMessage"
+            topic="chatroom" /> 
+    </redis:listener-container>
+</beans>

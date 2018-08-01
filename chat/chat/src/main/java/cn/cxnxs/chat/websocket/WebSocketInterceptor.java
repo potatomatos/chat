@@ -1,0 +1,63 @@
+package cn.cxnxs.chat.websocket;
+
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
+
+import org.apache.log4j.Logger;
+import org.springframework.http.server.ServerHttpRequest;
+import org.springframework.http.server.ServerHttpResponse;
+import org.springframework.http.server.ServletServerHttpRequest;
+import org.springframework.stereotype.Service;
+import org.springframework.web.socket.WebSocketHandler;
+import org.springframework.web.socket.server.support.HttpSessionHandshakeInterceptor;
+
+import com.alibaba.fastjson.JSONObject;
+
+import cn.cxnxs.chat.websocket.pojo.Client;
+import cn.cxnxs.chat.websocket.pojo.User;
+import cn.cxnxs.chat.websocket.util.MessageConstant;
+
+/**
+ * @author 蒙锦远
+ * @date 2017年12月20日 下午10:45:32
+ * @description
+ */
+@Service
+public class WebSocketInterceptor extends HttpSessionHandshakeInterceptor {
+	private Logger logger=Logger.getLogger(this.getClass());
+	@Override
+	public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response, WebSocketHandler handler,
+			Map<String, Object> map) throws Exception {
+		logger.debug("==============开始握手=============");
+		User user=new User();
+		if (request instanceof ServletServerHttpRequest) {
+			ServletServerHttpRequest serverHttpRequest = (ServletServerHttpRequest) request;
+			HttpSession session = serverHttpRequest.getServletRequest().getSession();
+			if (session != null) {
+				user=(User)session.getAttribute(MessageConstant.USER);
+			}
+			HttpServletRequest servletRequest = ((ServletServerHttpRequest) request).getServletRequest();
+			String chatroomId = servletRequest.getParameter("chatroomId");
+			String ip=servletRequest.getRemoteAddr();
+			String sessionId=session.getId();
+			
+			Client client=new Client();
+			client.setChatroomId(chatroomId);
+			client.setIp(ip);
+			client.setSessionId(sessionId);
+			client.setUser(user);
+			map.put("client", client);
+			String str=JSONObject.toJSONString(client);
+			logger.debug("客户端信息:"+str);
+		} 
+		return super.beforeHandshake(request, response, handler, map);
+	}
+
+	@Override
+	public void afterHandshake(ServerHttpRequest serverHttpRequest, ServerHttpResponse serverHttpResponse,
+			WebSocketHandler webSocketHandler, Exception e) {
+		logger.debug("==============握手完毕=============");
+	}
+}

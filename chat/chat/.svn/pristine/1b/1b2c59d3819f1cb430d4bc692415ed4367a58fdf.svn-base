@@ -1,0 +1,52 @@
+package com.mjy.chat.websocket.pojo;
+
+/**
+* @author 蒙锦远
+* @date 2017年12月21日 下午6:17:05
+* @description 
+*/
+public class CommonMessage extends BaseMessage {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	/**
+	 * 
+	 */
+	private String nickname;
+	private String content;
+	private String toUserId;
+	private String fromUserId;
+	public CommonMessage(){
+		
+	}
+
+	public String getContent() {
+		return content;
+	}
+
+	public void setContent(String content) {
+		this.content = content;
+	}
+
+	public String getNickname() {
+		return nickname;
+	}
+
+	public void setNickname(String nickname) {
+		this.nickname = nickname;
+	}
+	public String getToUserId() {
+		return toUserId;
+	}
+	public void setToUserId(String toUserId) {
+		this.toUserId = toUserId;
+	}
+	public String getFromUserId() {
+		return fromUserId;
+	}
+	public void setFromUserId(String fromUserId) {
+		this.fromUserId = fromUserId;
+	}
+	
+}

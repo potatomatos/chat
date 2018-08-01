@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>登录</title>
+<link href="css/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css"/>
+<link href="css/bootstrap.min.css" rel="stylesheet" type="text/css"/>
+<link href="css/login.css" rel="stylesheet" type="text/css"/>
+</head>
+<body>
+<div class="login-wrap">
+	<dl>
+		<dt>在线聊天</dt>
+		<dd><input type="text" class="form-control username" placeholder="输入昵称"/></dd>
+		<dd><button class="btn btn-success form-control btn-login">进入聊天室</button></dd>
+	</dl>
+</div>
+<script type="text/javascript" src="js/lib/jquery.min.js"></script>
+<script type="text/javascript" src="js/lib/bootstrap.min.js"></script>
+<script type="text/javascript" src="js/login.js"></script>
+</body>
+</html>

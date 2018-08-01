@@ -1,0 +1,439 @@
+package cn.cxnxs.chat.websocket;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.security.Principal;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.web.socket.CloseStatus;
+import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketExtension;
+import org.springframework.web.socket.WebSocketHandler;
+import org.springframework.web.socket.WebSocketMessage;
+import org.springframework.web.socket.WebSocketSession;
+
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
+
+import cn.cxnxs.chat.redis.dao.ChatroomDAO;
+import cn.cxnxs.chat.redis.dao.MessageDAO;
+import cn.cxnxs.chat.util.Tuling;
+import cn.cxnxs.chat.websocket.pojo.Client;
+import cn.cxnxs.chat.websocket.pojo.CommonMessage;
+import cn.cxnxs.chat.websocket.pojo.MessageType;
+import cn.cxnxs.chat.websocket.pojo.SystemMessage;
+import cn.cxnxs.chat.websocket.pojo.User;
+import cn.cxnxs.chat.websocket.util.MessageConstant;
+import cn.cxnxs.chat.websocket.util.WebsocketUtil;
+
+/**
+ * @author 蒙锦远
+ * @date 2017年12月20日 下午10:46:10
+ * @description 聊天室消息处理
+ */
+
+public class ChatHandler implements WebSocketHandler {
+
+	private final Logger logger = LoggerFactory.getLogger(ChatHandler.class);
+
+	// 存放在线用户列表
+	public static volatile ConcurrentHashMap<String, ConcurrentHashMap<String, WebSocketSession>> onlineUsers = new ConcurrentHashMap<>();
+	// 自动回复机器人id
+	private static String ROBOT = "robot";
+	// 存放用户的会话信息
+	@Autowired
+	private ChatroomDAO chatroomDAO;
+
+	@Autowired
+	private MessageDAO messageDAO;
+	
+	//消息计数，防止用户发送消息频率过高
+	private static volatile ConcurrentHashMap<String ,Long> counter=new ConcurrentHashMap<>();
+	/***
+	 * 建立连接调用
+	 */
+	@Override
+	public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+		// TODO Auto-generated method stub
+
+		Client client = (Client) session.getHandshakeAttributes().get("client");
+		logger.info("websocket 客户端连接成功，会话信息：" + JSONObject.toJSONString(client));
+
+		if (null != onlineUsers.get(client.getChatroomId())) {
+			if (null != onlineUsers.get(client.getChatroomId()).get(client.getUser().getUserId())) {
+				logger.debug("连接失败！客户端重复连接！");
+				return;
+			}
+		}
+
+		if (null != client) {
+			synchronized (this) {
+				if (null == onlineUsers.get(client.getChatroomId())) {
+					onlineUsers.put(client.getChatroomId(), new ConcurrentHashMap<String, WebSocketSession>());
+				}
+				onlineUsers.get(client.getChatroomId()).put(client.getUser().getUserId(), session);
+				chatroomDAO.addMermber(client);
+
+			}
+		}
+
+		// 加入聊天机器人
+		if (null == onlineUsers.get(client.getChatroomId()).get(ROBOT)) {
+			onlineUsers.get(client.getChatroomId()).put(ROBOT, new WebSocketSession() {
+
+				@Override
+				public void sendMessage(WebSocketMessage<?> message) throws IOException {
+					// TODO Auto-generated method stub
+
+				}
+
+				@Override
+				public boolean isOpen() {
+					// TODO Auto-generated method stub
+					return false;
+				}
+
+				@Override
+				public URI getUri() {
+					// TODO Auto-generated method stub
+					return null;
+				}
+
+				@Override
+				public InetSocketAddress getRemoteAddress() {
+					// TODO Auto-generated method stub
+					return null;
+				}
+
+				@Override
+				public Principal getPrincipal() {
+					// TODO Auto-generated method stub
+					return null;
+				}
+
+				@Override
+				public InetSocketAddress getLocalAddress() {
+					// TODO Auto-generated method stub
+					return null;
+				}
+
+				@Override
+				public String getId() {
+					// TODO Auto-generated method stub
+					return null;
+				}
+
+				@Override
+				public HttpHeaders getHandshakeHeaders() {
+					// TODO Auto-generated method stub
+					return null;
+				}
+
+				@Override
+				public Map<String, Object> getHandshakeAttributes() {
+					// TODO Auto-generated method stub
+					return null;
+				}
+
+				@Override
+				public List<WebSocketExtension> getExtensions() {
+					// TODO Auto-generated method stub
+					return null;
+				}
+
+				@Override
+				public String getAcceptedProtocol() {
+					// TODO Auto-generated method stub
+					return null;
+				}
+
+				@Override
+				public void close(CloseStatus status) throws IOException {
+					// TODO Auto-generated method stub
+
+				}
+
+				@Override
+				public void close() throws IOException {
+					// TODO Auto-generated method stub
+
+				}
+			});
+			User robotUser = new User();
+			robotUser.setNickname("聊天机器人");
+			robotUser.setUserId(ROBOT);
+			Client robotClient = new Client();
+			robotClient.setChatroomId(client.getChatroomId());
+			robotClient.setSessionId(ROBOT);
+			robotClient.setUser(robotUser);
+			chatroomDAO.addMermber(robotClient);
+		}
+		String content = client.getUser().getNickname() + "加入聊天室";
+		List<JSONObject> clients = getOnlineUsers(client.getChatroomId());
+		// 发送系统消息
+		sendSystemMessage(client.getChatroomId(), content, clients);
+	}
+
+	/**
+	 * 接收到消息时调用
+	 */
+	@Override
+	public void handleMessage(WebSocketSession session, WebSocketMessage<?> message) throws Exception {
+		Client client = (Client) session.getHandshakeAttributes().get("client");
+		logger.debug("----接收到客户端消息：" + message.getPayload());
+		CommonMessage commonMessage = JSON.parseObject((String) message.getPayload(), CommonMessage.class);
+		
+		if(null!=counter.get(commonMessage.getFromUserId())){
+			if((new Date().getTime()-counter.get(commonMessage.getFromUserId()))<1500){
+				logger.debug("消息发送频率过高,IP="+client.getIp());
+				SystemMessage systemMessage=new SystemMessage();
+				systemMessage.setContent("消息发送频率过高");
+				systemMessage.setCreateTime(new Date().getTime());
+				systemMessage.setMsgId(MessageType.SYS_MSG);
+				systemMessage.setMsgId(WebsocketUtil.getUUID());
+				sendMessageToUser(client.getChatroomId(), commonMessage.getFromUserId(), new TextMessage(JSONObject.toJSONString(systemMessage)));
+				return;
+			}
+		}
+		
+		
+		
+		// 发布订阅消息
+		JSONObject msg = new JSONObject();
+		msg.put("chatroomId", client.getChatroomId());
+		msg.put("msgType", commonMessage.getMsgType());
+		msg.put("message", commonMessage);
+
+		chatroomDAO.publish(MessageConstant.CHANNEL, msg.toJSONString());
+
+		String msgType = commonMessage.getMsgType();
+
+		// 保存公共聊天信息
+		if (MessageType.PUB_MSG.equals(msgType)) {
+			messageDAO.savePubMessage(client.getChatroomId(), commonMessage);
+		} else if (MessageType.PRI_MSG.equals(msgType)) {
+			// 保存用户私聊消息
+			messageDAO.savePriMessage(commonMessage);
+		}
+		
+		counter.put(commonMessage.getFromUserId(), new Date().getTime());
+
+	}
+
+	/**
+	 * 订阅消息监听
+	 * 
+	 * @param message
+	 */
+	public void handleMessage(String message) {
+		logger.debug("监听到订阅消息：" + message);
+		JSONObject json = JSONObject.parseObject(message);
+		String msgType = json.getString("msgType");
+		String chatroomId = json.getString("chatroomId");
+		String msg = json.getString("message");
+		logger.debug("消息类型：" + msgType);
+
+		TextMessage textMessage = new TextMessage(msg);
+		if (MessageType.SYS_MSG.equals(msgType)) {
+			broadcast(chatroomId, textMessage);
+		} else if (MessageType.PUB_MSG.equals(msgType)) {
+			broadcast(chatroomId, textMessage);
+		} else if (MessageType.PRI_MSG.equals(msgType)) {
+			JSONObject msgJson = JSONObject.parseObject(msg);
+			String toUserId = msgJson.getString("toUserId");
+			String fromUserId = msgJson.getString("fromUserId");
+			// 若消息接收者是机器人，那么调用自动回复
+			if (toUserId.equals(ROBOT)) {
+				String robotMsg = Tuling.TulingRobot(msg);
+				JSONObject robotJson = JSONObject.parseObject(robotMsg);
+				String respMsg = robotJson.getString("text");
+				logger.debug("autoMSG:"+respMsg);
+				CommonMessage commonMessage=new CommonMessage();
+				commonMessage.setContent(respMsg);
+				commonMessage.setCreateTime(new Date().getTime());
+				commonMessage.setFromUserId(ROBOT);
+				commonMessage.setToUserId(fromUserId);
+				commonMessage.setMsgType(msgType);
+				commonMessage.setMsgId(WebsocketUtil.getUUID());
+				commonMessage.setNickname("聊天机器人");
+				textMessage = new TextMessage(JSONObject.toJSONString(commonMessage));
+				
+				if (null != onlineUsers.get(chatroomId)) {
+					if (null != onlineUsers.get(chatroomId).get(fromUserId)) {
+						sendMessageToUser(chatroomId, fromUserId, textMessage);
+					}
+				}
+			}else{
+				if (null != onlineUsers.get(chatroomId)) {
+					if (null != onlineUsers.get(chatroomId).get(toUserId)) {
+						sendMessageToUser(chatroomId, toUserId, textMessage);
+					}
+				}
+			}
+
+		}
+	}
+
+	/**
+	 * 连接出错触发
+	 */
+	@Override
+	public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
+		Client client = (Client) session.getHandshakeAttributes().get("client");
+		logger.debug(client.getUser().getNickname() + "连接出错");
+		synchronized (this) {
+			// 将用户从在线列表移除
+			onlineUsers.get(client.getChatroomId()).remove(client.getUser().getUserId());
+			boolean res = chatroomDAO.delMermber(client.getChatroomId(), client.getUser().getUserId());
+			if (res) {
+				logger.info("删除成功");
+			} else {
+				logger.info("删除失败");
+			}
+			List<JSONObject> clients = getOnlineUsers(client.getChatroomId());
+			// 发送系统消息
+			sendSystemMessage(client.getChatroomId(), client.getUser().getNickname() + "离开了聊天室", clients);
+			// 关闭连接
+			if (session.isOpen()) {
+				session.close();
+			}
+		}
+
+	}
+
+	/**
+	 * 连接断开触发
+	 */
+	@Override
+	public void afterConnectionClosed(WebSocketSession session, CloseStatus closeStatus) throws Exception {
+		Client client = (Client) session.getHandshakeAttributes().get("client");
+		logger.debug(client.getUser().getNickname() + "连接断开");
+		synchronized (this) {
+			// 将用户从在线列表移除
+			onlineUsers.get(client.getChatroomId()).remove(client.getUser().getUserId());
+			boolean res = chatroomDAO.delMermber(client.getChatroomId(), client.getUser().getUserId());
+			if (res) {
+				logger.info("删除成功");
+			} else {
+				logger.info("删除失败");
+			}
+			List<JSONObject> clients = getOnlineUsers(client.getChatroomId());
+			// 发送系统消息
+			sendSystemMessage(client.getChatroomId(), client.getUser().getNickname() + "离开了聊天室", clients);
+			// 关闭连接
+			if (session.isOpen()) {
+				session.close();
+			}
+		}
+
+	}
+
+	@Override
+	public boolean supportsPartialMessages() {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	/**
+	 * 广播消息
+	 */
+	public boolean broadcast(String chatroomId, TextMessage textMessage) {
+
+		ConcurrentHashMap<String, WebSocketSession> olUsers = onlineUsers.get(chatroomId);
+		for (WebSocketSession webSocketSession : olUsers.values()) {
+
+			try {
+				if (webSocketSession.isOpen()) {
+					webSocketSession.sendMessage(textMessage);
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/**
+	 * 发送消息给指定用户
+	 */
+	public boolean sendMessageToUser(String chatroomId, String userId, TextMessage message) {
+		logger.debug("开始发送私聊消息to:" + userId);
+		WebSocketSession session = onlineUsers.get(chatroomId).get(userId);
+		if (session == null)
+			return false;
+		if (!session.isOpen())
+			return false;
+		try {
+			session.sendMessage(message);
+		} catch (IOException e) {
+			e.printStackTrace();
+			return false;
+		}
+		return true;
+	}
+
+	/**
+	 * 获取在线用户
+	 * 
+	 * @return
+	 */
+	private List<JSONObject> getOnlineUsers(String chatroomId) {
+		List<JSONObject> list = new ArrayList<>();
+		Map<String, Client> clients = chatroomDAO.getOnlineMermbers(chatroomId);
+		for (Client client : clients.values()) {
+			JSONObject jsonObject = new JSONObject();
+			jsonObject.put("userId", client.getUser().getUserId());
+			jsonObject.put("nickname", client.getUser().getNickname());
+			list.add(jsonObject);
+
+		}
+		return list;
+	}
+
+	/**
+	 * 发送系统提示
+	 * 
+	 * @throws Exception
+	 */
+	public void sendSystemMessage(String chatroomId, String content, Object args) throws Exception {
+		SystemMessage systemMessage = new SystemMessage();
+		systemMessage.setMsgType(MessageType.SYS_MSG);
+		systemMessage.setMsgId(WebsocketUtil.getUUID());
+		systemMessage.setCreateTime(new Date().getTime());
+		systemMessage.setContent(content);
+		systemMessage.setArgs(args);
+
+		JSONObject message = new JSONObject();
+		message.put("chatroomId", chatroomId);
+		message.put("msgType", MessageType.SYS_MSG);
+		message.put("message", systemMessage);
+		// 发布订阅消息
+		chatroomDAO.publish(MessageConstant.CHANNEL, message.toJSONString());
+
+	}
+
+	/**
+	 * 封装发来的消息
+	 */
+	public CommonMessage buildMessage(JSONObject json) {
+		CommonMessage message = new CommonMessage();
+		message.setMsgId(WebsocketUtil.getUUID());
+		message.setNickname(json.getString("nickname"));
+		message.setFromUserId(json.getString("fromUserId"));
+		message.setToUserId(json.getString("toUserId"));
+		message.setCreateTime(Long.parseLong(json.getString("createTime")));
+		message.setContent(json.getString("content"));
+		message.setMsgType(json.getString("msgType"));
+		return message;
+	}
+}
