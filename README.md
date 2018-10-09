@@ -1,1 +1,1 @@
-websocket聊天室分布式版
+websocket聊天室集群版
